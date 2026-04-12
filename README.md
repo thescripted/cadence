@@ -1,96 +1,56 @@
 # Habit Tracking
 
-Monorepo scaffold for a personalized habit tracker consistency toolkit.
+Habit Tracking is a small monorepo for a personal habit tracker. It includes:
 
-## Layout
+- a Go API for habits, daily logs, notes, and weekly recaps
+- a React web app
+- an Expo mobile app
+- shared TypeScript package code
+- Postgres migrations for the app data
 
-- `apps/api`: Go API using `net/http`
-- `apps/web`: React web app using Vite and Radix Themes
-- `apps/mobile`: Expo mobile app
-- `packages/shared`: shared TypeScript types and constants
-- `infra/postgres/migrations`: SQL schema migrations
+## Install
 
-## MVP backend scope
+1. Install dependencies:
 
-The initial backend includes:
+```bash
+pnpm install
+```
 
-- configuration loading from environment variables
-- HTTP server bootstrap
-- health endpoints
-- database connection plumbing
-- first Postgres migration for the MVP schema
+2. Create a local environment file from the example:
 
-## Local development
+```bash
+cp .env.example .env
+```
 
-The repo is scaffolded so the next steps are:
+3. Create a Postgres database named `habit_tracking`.
 
-1. install workspace dependencies with `pnpm install`
-2. install a Postgres server locally or connect to an existing instance
-3. run the schema and seed migrations
-4. start the API and verify database connectivity
+4. Run the migrations:
 
-See `.env.example` for the required environment variables.
+```bash
+psql -d habit_tracking -f infra/postgres/migrations/0001_initial_schema.sql
+psql -d habit_tracking -f infra/postgres/migrations/0002_seed_default_user.sql
+```
 
-### API
-
-Build the API:
+5. Start the API:
 
 ```bash
 cd apps/api
-GOCACHE=$(pwd)/.cache/go-build go build ./...
+set -a
+source ../../.env
+set +a
+GOCACHE=$(pwd)/.cache/go-build go run ./cmd/api
 ```
 
-Run the API:
-
-```bash
-cd apps/api
-PORT=8080 DATABASE_URL=postgres://YOUR_LOCAL_DB_USER@localhost:5432/habit_tracking?sslmode=disable GOCACHE=$(pwd)/.cache/go-build go run ./cmd/api
-```
-
-### Postgres
-
-Create the database:
-
-```bash
-/opt/homebrew/opt/postgresql@17/bin/createdb -h localhost -U YOUR_LOCAL_DB_USER habit_tracking
-```
-
-Apply the migration:
-
-```bash
-/opt/homebrew/opt/postgresql@17/bin/psql -h localhost -U YOUR_LOCAL_DB_USER -d habit_tracking -f infra/postgres/migrations/0001_initial_schema.sql
-/opt/homebrew/opt/postgresql@17/bin/psql -h localhost -U YOUR_LOCAL_DB_USER -d habit_tracking -f infra/postgres/migrations/0002_seed_default_user.sql
-```
-
-### Verification
-
-Check health:
-
-```bash
-curl -s http://127.0.0.1:8080/healthz
-curl -s -i http://127.0.0.1:8080/readyz
-curl -s http://127.0.0.1:8080/habits
-curl -s -X PATCH http://127.0.0.1:8080/habits/1 \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Water intake","targetValue":10}'
-curl -s http://127.0.0.1:8080/today
-curl -s -X PUT http://127.0.0.1:8080/today/log \
-  -H 'Content-Type: application/json' \
-  -d '{"habitId":1,"status":"logged","value":1}'
-curl -s -X PUT http://127.0.0.1:8080/today/note \
-  -H 'Content-Type: application/json' \
-  -d '{"note":"Solid day overall."}'
-curl -s http://127.0.0.1:8080/recap/week
-```
-
-Run the web client:
+6. In a new terminal, start the web app:
 
 ```bash
 pnpm dev:web
 ```
 
-Run the Expo client:
+7. If you want the mobile app too, start Expo in another terminal:
 
 ```bash
 pnpm dev:mobile
 ```
+
+The web app and mobile app both talk to the API at `http://127.0.0.1:8080` by default.
