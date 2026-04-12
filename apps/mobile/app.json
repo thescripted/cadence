@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "Habit Tracking",
+    "slug": "habit-tracking",
+    "scheme": "habit-tracking",
+    "plugins": ["expo-router"]
+  }
+}
