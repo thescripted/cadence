@@ -4,6 +4,11 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "dev:all": "node ./scripts/dev.mjs backend ui db",
+    "dev:backend": "node ./scripts/dev.mjs backend",
+    "dev:db": "node ./scripts/dev.mjs db",
+    "dev:ui": "node ./scripts/dev.mjs ui",
     "dev:web": "pnpm --filter @habit-tracking/web dev",
     "dev:mobile": "pnpm --filter @habit-tracking/mobile start",
     "build:web": "pnpm --filter @habit-tracking/web build"
