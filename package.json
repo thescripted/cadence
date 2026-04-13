@@ -4,8 +4,14 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
+    "dev": "npx concurrently --names api,web,mobile --prefix-colors blue,green,magenta \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev:api": "cd apps/api && PORT=${PORT:-8080} DATABASE_URL=${DATABASE_URL:-postgres://YOUR_LOCAL_DB_USER@localhost:5432/habit_tracking?sslmode=disable} GOCACHE=$(pwd)/.cache/go-build go run ./cmd/api",
     "dev:web": "pnpm --filter @habit-tracking/web dev",
     "dev:mobile": "pnpm --filter @habit-tracking/mobile start",
-    "build:web": "pnpm --filter @habit-tracking/web build"
+    "build:web": "pnpm --filter @habit-tracking/web build",
+    "build:api": "cd apps/api && GOCACHE=$(pwd)/.cache/go-build go build ./..."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

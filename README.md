@@ -31,26 +31,49 @@ psql -d habit_tracking -f infra/postgres/migrations/0001_initial_schema.sql
 psql -d habit_tracking -f infra/postgres/migrations/0002_seed_default_user.sql
 ```
 
+## Root Scripts
+
+Start the full local stack with prefixed, streamed logs:
+
+```bash
+DATABASE_URL=postgres://YOUR_LOCAL_DB_USER@localhost:5432/habit_tracking?sslmode=disable npm run dev
+```
+
+Start individual surfaces:
+
+```bash
+npm run dev:api
+npm run dev:web
+npm run dev:mobile
+```
+
+Build targets:
+
+```bash
+npm run build:api
+npm run build:web
+```
+
+`npm run dev` uses `concurrently`, so the API, web app, and Expo dev server stream together with separate prefixes.
+
+## Running The App
+
 5. Start the API:
 
 ```bash
-cd apps/api
-set -a
-source ../../.env
-set +a
-GOCACHE=$(pwd)/.cache/go-build go run ./cmd/api
+DATABASE_URL=postgres://YOUR_LOCAL_DB_USER@localhost:5432/habit_tracking?sslmode=disable npm run dev:api
 ```
 
 6. In a new terminal, start the web app:
 
 ```bash
-pnpm dev:web
+npm run dev:web
 ```
 
 7. If you want the mobile app too, start Expo in another terminal:
 
 ```bash
-pnpm dev:mobile
+npm run dev:mobile
 ```
 
 The web app and mobile app both talk to the API at `http://127.0.0.1:8080` by default.
