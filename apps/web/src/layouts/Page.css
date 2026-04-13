@@ -1,0 +1,23 @@
+.page-shell {
+  min-height: 100vh;
+  padding: 2rem 1rem 4rem;
+}
+
+.stack {
+  padding-top: 1rem;
+}
+
+.grid-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    padding-inline: 0.75rem;
+  }
+
+  .grid-two {
+    grid-template-columns: 1fr;
+  }
+}

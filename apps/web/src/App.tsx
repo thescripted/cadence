@@ -6,7 +6,7 @@ import { HeroCard } from "./components/HeroCard";
 import { TodayCard } from "./components/TodayCard";
 import { WeekRecapCard } from "./components/WeekRecapCard";
 import { refreshAll, refreshWeek, syncCounterDrafts } from "./lib/api";
-import { AppShell } from "./layouts/AppShell";
+import { Page } from "./layouts/Page";
 import type { Habit, HabitForm, TodayResponse, WeekRecap } from "./types";
 
 const defaultForm: HabitForm = {
@@ -158,7 +158,7 @@ export function App() {
   }
 
   return (
-    <AppShell
+    <Page
       hero={<HeroCard />}
       topRow={
         <>

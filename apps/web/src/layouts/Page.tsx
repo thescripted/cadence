@@ -1,14 +1,15 @@
-import { Box, Container, Flex, Theme } from "@radix-ui/themes";
 import type { ReactNode } from "react";
+import { Box, Container, Flex, Theme } from "../primitives";
+import "./Page.css";
 
-type AppShellProps = {
+type PageProps = {
   hero: ReactNode;
   topRow: ReactNode;
   middleRow: ReactNode;
   bottomRow: ReactNode;
 };
 
-export function AppShell({ hero, topRow, middleRow, bottomRow }: AppShellProps) {
+export function Page({ hero, topRow, middleRow, bottomRow }: PageProps) {
   return (
     <Theme accentColor="amber" grayColor="sand" radius="large" scaling="105%">
       <Box className="page-shell">

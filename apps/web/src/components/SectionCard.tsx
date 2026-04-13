@@ -1,5 +1,5 @@
-import { Card, Flex, Heading, Separator } from "@radix-ui/themes";
 import type { ReactNode } from "react";
+import { Card, Flex, Heading, Separator } from "../primitives";
 
 type SectionCardProps = {
   title: ReactNode;

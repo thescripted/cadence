@@ -1,4 +1,4 @@
-import { Button, Card, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading, Text, TextField } from "../primitives";
 
 type ConnectionPanelProps = {
   apiBaseUrl: string;

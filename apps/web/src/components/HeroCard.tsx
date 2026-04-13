@@ -1,4 +1,5 @@
-import { Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Card, Flex, Heading, Text } from "../primitives";
+import "./HeroCard.css";
 
 export function HeroCard() {
   return (

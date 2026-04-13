@@ -1,7 +1,8 @@
-import { Badge, Box, Button, Card, Flex, Text, TextArea, TextField } from "@radix-ui/themes";
 import { badgeColor, formatTarget, parseCounterDraft } from "../lib/format";
+import { Badge, Box, Button, Card, Flex, Text, TextArea, TextField } from "../primitives";
 import { SectionCard } from "./SectionCard";
 import type { TodayResponse } from "../types";
+import "./TodayCard.css";
 
 type TodayCardProps = {
   today: TodayResponse;

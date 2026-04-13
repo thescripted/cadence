@@ -1,11 +1,13 @@
-import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "@radix-ui/themes";
+import type { FormEvent } from "react";
+import { Box, Button, Card, Flex, Heading, Select, Text, TextField } from "../primitives";
 import type { HabitForm } from "../types";
+import "./HabitFormCard.css";
 
 type HabitFormCardProps = {
   editingHabitId: number | null;
   form: HabitForm;
   isPending: boolean;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onFormChange: (recipe: (current: HabitForm) => HabitForm) => void;
   onReset: () => void;
 };

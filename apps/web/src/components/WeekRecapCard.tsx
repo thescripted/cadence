@@ -1,4 +1,4 @@
-import { Badge, Table, Text } from "@radix-ui/themes";
+import { Badge, Table, Text } from "../primitives";
 import { SectionCard } from "./SectionCard";
 import type { WeekRecap } from "../types";
 

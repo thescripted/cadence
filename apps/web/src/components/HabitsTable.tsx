@@ -1,6 +1,6 @@
-import { Button, Flex, Table, Text } from "@radix-ui/themes";
-import { SectionCard } from "./SectionCard";
 import { formatTarget } from "../lib/format";
+import { Button, Flex, Table, Text } from "../primitives";
+import { SectionCard } from "./SectionCard";
 import type { Habit } from "../types";
 
 type HabitsTableProps = {
