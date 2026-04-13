@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,6 +36,11 @@ type TodayRepository struct {
 	db *pgxpool.Pool
 }
 
+type Today struct {
+	repo   TodayRepository
+	userID int64
+}
+
 type UpdateLogInput struct {
 	CadenceID int64  `json:"habitId"`
 	Status    string `json:"status"`
@@ -47,6 +53,75 @@ type UpdateNoteInput struct {
 
 func NewTodayRepository(db *pgxpool.Pool) TodayRepository {
 	return TodayRepository{db: db}
+}
+
+func NewToday(repo TodayRepository, userID int64) Today {
+	return Today{repo: repo, userID: userID}
+}
+
+func (t Today) routes() []routeDef {
+	return []routeDef{
+		{method: http.MethodGet, path: "", handler: t.get},
+		{method: http.MethodPut, path: "/log", handler: t.updateLog},
+		{method: http.MethodPut, path: "/note", handler: t.updateNote},
+	}
+}
+
+func (t Today) get(w http.ResponseWriter, r *http.Request) {
+	response, err := t.repo.Get(r.Context(), t.userID, time.Now())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (t Today) updateLog(w http.ResponseWriter, r *http.Request) {
+	var input UpdateLogInput
+	if err := decodeJSON(r, &input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid JSON payload",
+		})
+		return
+	}
+
+	response, err := t.repo.UpdateLog(r.Context(), t.userID, time.Now(), input)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if errors.Is(err, ErrInvalidLogInput) {
+			statusCode = http.StatusBadRequest
+		}
+
+		writeJSON(w, statusCode, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (t Today) updateNote(w http.ResponseWriter, r *http.Request) {
+	var input UpdateNoteInput
+	if err := decodeJSON(r, &input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid JSON payload",
+		})
+		return
+	}
+
+	response, err := t.repo.UpdateNote(r.Context(), t.userID, time.Now(), input)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (r TodayRepository) Get(ctx context.Context, userID int64, date time.Time) (Response, error) {

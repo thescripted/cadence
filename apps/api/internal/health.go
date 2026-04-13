@@ -13,13 +13,24 @@ type HealthHandler struct {
 	DB *pgxpool.Pool
 }
 
-func (h HealthHandler) Live(w http.ResponseWriter, _ *http.Request) {
+type Health struct {
+	DB *pgxpool.Pool
+}
+
+func (h Health) routes() []routeDef {
+	return []routeDef{
+		{method: http.MethodGet, path: "/healthz", handler: h.live},
+		{method: http.MethodGet, path: "/readyz", handler: h.ready},
+	}
+}
+
+func (h Health) live(w http.ResponseWriter, _ *http.Request) {
 	writeHealthJSON(w, http.StatusOK, map[string]string{
 		"status": "ok",
 	})
 }
 
-func (h HealthHandler) Ready(w http.ResponseWriter, _ *http.Request) {
+func (h Health) ready(w http.ResponseWriter, _ *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 

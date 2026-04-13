@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,8 +32,35 @@ type RecapRepository struct {
 	db *pgxpool.Pool
 }
 
+type Recap struct {
+	repo   RecapRepository
+	userID int64
+}
+
 func NewRecapRepository(db *pgxpool.Pool) RecapRepository {
 	return RecapRepository{db: db}
+}
+
+func NewRecap(repo RecapRepository, userID int64) Recap {
+	return Recap{repo: repo, userID: userID}
+}
+
+func (r Recap) routes() []routeDef {
+	return []routeDef{
+		{method: http.MethodGet, path: "/week", handler: r.week},
+	}
+}
+
+func (r Recap) week(w http.ResponseWriter, req *http.Request) {
+	response, err := r.repo.Week(req.Context(), r.userID, time.Now())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (r RecapRepository) Week(ctx context.Context, userID int64, endDate time.Time) (WeekResponse, error) {

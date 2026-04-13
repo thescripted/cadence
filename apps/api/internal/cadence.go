@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,8 +50,97 @@ type CadenceRepository struct {
 	db *pgxpool.Pool
 }
 
+type Cadences struct {
+	repo   CadenceRepository
+	userID int64
+}
+
 func NewCadenceRepository(db *pgxpool.Pool) CadenceRepository {
 	return CadenceRepository{db: db}
+}
+
+func NewCadence(repo CadenceRepository, userID int64) Cadences {
+	return Cadences{repo: repo, userID: userID}
+}
+
+func (c Cadences) routes() []routeDef {
+	return []routeDef{
+		{method: http.MethodGet, path: "", handler: c.list},
+		{method: http.MethodPost, path: "", handler: c.create},
+		{method: http.MethodPatch, path: "/{id}", handler: c.update},
+	}
+}
+
+func (c Cadences) list(w http.ResponseWriter, r *http.Request) {
+	items, err := c.repo.List(r.Context(), c.userID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"habits": items,
+	})
+}
+
+func (c Cadences) create(w http.ResponseWriter, r *http.Request) {
+	var input CreateCadenceInput
+	if err := decodeJSON(r, &input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid JSON payload",
+		})
+		return
+	}
+
+	item, err := c.repo.Create(r.Context(), c.userID, input)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if isValidationError(err) {
+			statusCode = http.StatusBadRequest
+		}
+
+		writeJSON(w, statusCode, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (c Cadences) update(w http.ResponseWriter, r *http.Request) {
+	cadenceID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || cadenceID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid cadence id",
+		})
+		return
+	}
+
+	var input UpdateCadenceInput
+	if err := decodeJSON(r, &input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid JSON payload",
+		})
+		return
+	}
+
+	item, err := c.repo.Update(r.Context(), c.userID, cadenceID, input)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if isValidationError(err) {
+			statusCode = http.StatusBadRequest
+		}
+
+		writeJSON(w, statusCode, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, item)
 }
 
 func (r CadenceRepository) Create(ctx context.Context, userID int64, input CreateCadenceInput) (Cadence, error) {
@@ -248,4 +339,8 @@ func nullableString(value *string) any {
 	}
 
 	return *value
+}
+
+func isValidationError(err error) bool {
+	return errors.Is(err, ErrInvalidInput)
 }
