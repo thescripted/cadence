@@ -1,4 +1,4 @@
-package today
+package app
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 
 var ErrInvalidLogInput = errors.New("invalid today log input")
 
-type HabitSnapshot struct {
-	HabitID      int64   `json:"habitId"`
+type CadenceSnapshot struct {
+	CadenceID    int64   `json:"habitId"`
 	Name         string  `json:"name"`
 	Type         string  `json:"type"`
 	Unit         *string `json:"unit"`
@@ -26,30 +26,30 @@ type HabitSnapshot struct {
 }
 
 type Response struct {
-	Date   string          `json:"date"`
-	Note   string          `json:"note"`
-	Habits []HabitSnapshot `json:"habits"`
+	Date     string            `json:"date"`
+	Note     string            `json:"note"`
+	Cadences []CadenceSnapshot `json:"habits"`
 }
 
-type Repository struct {
+type TodayRepository struct {
 	db *pgxpool.Pool
 }
 
 type UpdateLogInput struct {
-	HabitID int64  `json:"habitId"`
-	Status  string `json:"status"`
-	Value   *int   `json:"value"`
+	CadenceID int64  `json:"habitId"`
+	Status    string `json:"status"`
+	Value     *int   `json:"value"`
 }
 
 type UpdateNoteInput struct {
 	Note string `json:"note"`
 }
 
-func NewRepository(db *pgxpool.Pool) Repository {
-	return Repository{db: db}
+func NewTodayRepository(db *pgxpool.Pool) TodayRepository {
+	return TodayRepository{db: db}
 }
 
-func (r Repository) Get(ctx context.Context, userID int64, date time.Time) (Response, error) {
+func (r TodayRepository) Get(ctx context.Context, userID int64, date time.Time) (Response, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT
 			h.id,
@@ -77,9 +77,9 @@ func (r Repository) Get(ctx context.Context, userID int64, date time.Time) (Resp
 	defer rows.Close()
 
 	response := Response{
-		Date:   date.Format("2006-01-02"),
-		Note:   "",
-		Habits: make([]HabitSnapshot, 0),
+		Date:     date.Format("2006-01-02"),
+		Note:     "",
+		Cadences: make([]CadenceSnapshot, 0),
 	}
 
 	if note, err := r.getDayNote(ctx, userID, date); err == nil {
@@ -89,13 +89,13 @@ func (r Repository) Get(ctx context.Context, userID int64, date time.Time) (Resp
 	}
 
 	for rows.Next() {
-		var snapshot HabitSnapshot
+		var snapshot CadenceSnapshot
 		var unit *string
 		var targetValue *int
 		var logStatus *string
 
 		if err := rows.Scan(
-			&snapshot.HabitID,
+			&snapshot.CadenceID,
 			&snapshot.Name,
 			&snapshot.Type,
 			&unit,
@@ -112,7 +112,7 @@ func (r Repository) Get(ctx context.Context, userID int64, date time.Time) (Resp
 		snapshot.TargetValue = targetValue
 		snapshot.LogStatus = deriveLogStatus(logStatus)
 		snapshot.State = deriveState(snapshot)
-		response.Habits = append(response.Habits, snapshot)
+		response.Cadences = append(response.Cadences, snapshot)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -122,7 +122,7 @@ func (r Repository) Get(ctx context.Context, userID int64, date time.Time) (Resp
 	return response, nil
 }
 
-func (r Repository) UpdateNote(ctx context.Context, userID int64, date time.Time, input UpdateNoteInput) (Response, error) {
+func (r TodayRepository) UpdateNote(ctx context.Context, userID int64, date time.Time, input UpdateNoteInput) (Response, error) {
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return Response{}, fmt.Errorf("begin update note tx: %w", err)
@@ -150,7 +150,7 @@ func (r Repository) UpdateNote(ctx context.Context, userID int64, date time.Time
 	return r.Get(ctx, userID, date)
 }
 
-func (r Repository) UpdateLog(ctx context.Context, userID int64, date time.Time, input UpdateLogInput) (Response, error) {
+func (r TodayRepository) UpdateLog(ctx context.Context, userID int64, date time.Time, input UpdateLogInput) (Response, error) {
 	if err := validateUpdateLogInput(input); err != nil {
 		return Response{}, err
 	}
@@ -161,12 +161,12 @@ func (r Repository) UpdateLog(ctx context.Context, userID int64, date time.Time,
 	}
 	defer tx.Rollback(ctx)
 
-	habitType, err := r.lookupHabitType(ctx, tx, userID, input.HabitID)
+	cadenceType, err := r.lookupCadenceType(ctx, tx, userID, input.CadenceID)
 	if err != nil {
 		return Response{}, err
 	}
 
-	value := deriveLoggedValue(habitType, input)
+	value := deriveLoggedValue(cadenceType, input)
 
 	dayEntryID, err := r.ensureDayEntry(ctx, tx, userID, date)
 	if err != nil {
@@ -182,7 +182,7 @@ func (r Repository) UpdateLog(ctx context.Context, userID int64, date time.Time,
 			value = EXCLUDED.value,
 			status = EXCLUDED.status,
 			updated_at = NOW()
-	`, userID, input.HabitID, dayEntryID, date.Format("2006-01-02"), value, input.Status)
+	`, userID, input.CadenceID, dayEntryID, date.Format("2006-01-02"), value, input.Status)
 	if err != nil {
 		return Response{}, fmt.Errorf("upsert habit log: %w", err)
 	}
@@ -194,25 +194,25 @@ func (r Repository) UpdateLog(ctx context.Context, userID int64, date time.Time,
 	return r.Get(ctx, userID, date)
 }
 
-func (r Repository) lookupHabitType(ctx context.Context, tx pgx.Tx, userID, habitID int64) (string, error) {
-	var habitType string
+func (r TodayRepository) lookupCadenceType(ctx context.Context, tx pgx.Tx, userID, habitID int64) (string, error) {
+	var cadenceType string
 	err := tx.QueryRow(ctx, `
 		SELECT type
 		FROM habits
 		WHERE id = $1 AND user_id = $2 AND is_active = TRUE AND archived_at IS NULL
-	`, habitID, userID).Scan(&habitType)
+	`, habitID, userID).Scan(&cadenceType)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", fmt.Errorf("%w: habit not found", ErrInvalidLogInput)
+			return "", fmt.Errorf("%w: cadence not found", ErrInvalidLogInput)
 		}
 
-		return "", fmt.Errorf("lookup habit: %w", err)
+		return "", fmt.Errorf("lookup cadence: %w", err)
 	}
 
-	return habitType, nil
+	return cadenceType, nil
 }
 
-func (r Repository) ensureDayEntry(ctx context.Context, tx pgx.Tx, userID int64, date time.Time) (int64, error) {
+func (r TodayRepository) ensureDayEntry(ctx context.Context, tx pgx.Tx, userID int64, date time.Time) (int64, error) {
 	var dayEntryID int64
 	err := tx.QueryRow(ctx, `
 		INSERT INTO day_entries (user_id, entry_date)
@@ -228,7 +228,7 @@ func (r Repository) ensureDayEntry(ctx context.Context, tx pgx.Tx, userID int64,
 	return dayEntryID, nil
 }
 
-func (r Repository) getDayNote(ctx context.Context, userID int64, date time.Time) (string, error) {
+func (r TodayRepository) getDayNote(ctx context.Context, userID int64, date time.Time) (string, error) {
 	var note *string
 	err := r.db.QueryRow(ctx, `
 		SELECT note
@@ -248,7 +248,7 @@ func (r Repository) getDayNote(ctx context.Context, userID int64, date time.Time
 }
 
 func validateUpdateLogInput(input UpdateLogInput) error {
-	if input.HabitID <= 0 {
+	if input.CadenceID <= 0 {
 		return fmt.Errorf("%w: habitId is required", ErrInvalidLogInput)
 	}
 
@@ -265,13 +265,13 @@ func validateUpdateLogInput(input UpdateLogInput) error {
 	return nil
 }
 
-func deriveLoggedValue(habitType string, input UpdateLogInput) int {
+func deriveLoggedValue(cadenceType string, input UpdateLogInput) int {
 	if input.Status == "skipped" {
 		return 0
 	}
 
 	if input.Value == nil {
-		if habitType == "binary" {
+		if cadenceType == "binary" {
 			return 1
 		}
 		return 0
@@ -288,7 +288,7 @@ func deriveLogStatus(logStatus *string) string {
 	return *logStatus
 }
 
-func deriveState(snapshot HabitSnapshot) string {
+func deriveState(snapshot CadenceSnapshot) string {
 	if snapshot.LogStatus == "skipped" {
 		return "skipped"
 	}

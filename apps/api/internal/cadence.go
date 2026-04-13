@@ -1,4 +1,4 @@
-package habits
+package app
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrInvalidInput = errors.New("invalid habit input")
+var ErrInvalidInput = errors.New("invalid cadence input")
 
-type Habit struct {
+type Cadence struct {
 	ID           int64     `json:"id"`
 	Name         string    `json:"name"`
 	Type         string    `json:"type"`
@@ -24,7 +24,7 @@ type Habit struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
-type CreateHabitInput struct {
+type CreateCadenceInput struct {
 	Name         string  `json:"name"`
 	Type         string  `json:"type"`
 	Unit         *string `json:"unit"`
@@ -33,7 +33,7 @@ type CreateHabitInput struct {
 	DisplayOrder int     `json:"displayOrder"`
 }
 
-type UpdateHabitInput struct {
+type UpdateCadenceInput struct {
 	Name         *string `json:"name"`
 	Type         *string `json:"type"`
 	Unit         *string `json:"unit"`
@@ -44,17 +44,17 @@ type UpdateHabitInput struct {
 	IsArchived   *bool   `json:"isArchived"`
 }
 
-type Repository struct {
+type CadenceRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewRepository(db *pgxpool.Pool) Repository {
-	return Repository{db: db}
+func NewCadenceRepository(db *pgxpool.Pool) CadenceRepository {
+	return CadenceRepository{db: db}
 }
 
-func (r Repository) Create(ctx context.Context, userID int64, input CreateHabitInput) (Habit, error) {
-	if err := validateCreateHabit(input); err != nil {
-		return Habit{}, err
+func (r CadenceRepository) Create(ctx context.Context, userID int64, input CreateCadenceInput) (Cadence, error) {
+	if err := validateCreateCadence(input); err != nil {
+		return Cadence{}, err
 	}
 
 	row := r.db.QueryRow(ctx, `
@@ -63,10 +63,10 @@ func (r Repository) Create(ctx context.Context, userID int64, input CreateHabitI
 		RETURNING id, name, type, unit, target_type, target_value, display_order, is_active, created_at, updated_at
 	`, userID, input.Name, input.Type, nullableString(input.Unit), input.TargetType, input.TargetValue, input.DisplayOrder)
 
-	return scanHabit(row)
+	return scanCadence(row)
 }
 
-func (r Repository) List(ctx context.Context, userID int64) ([]Habit, error) {
+func (r CadenceRepository) List(ctx context.Context, userID int64) ([]Cadence, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, name, type, unit, target_type, target_value, display_order, is_active, created_at, updated_at
 		FROM habits
@@ -74,33 +74,33 @@ func (r Repository) List(ctx context.Context, userID int64) ([]Habit, error) {
 		ORDER BY display_order ASC, id ASC
 	`, userID)
 	if err != nil {
-		return nil, fmt.Errorf("list habits: %w", err)
+		return nil, fmt.Errorf("list cadences: %w", err)
 	}
 	defer rows.Close()
 
-	habits := make([]Habit, 0)
+	cadences := make([]Cadence, 0)
 	for rows.Next() {
-		habit, err := scanHabit(rows)
+		cadence, err := scanCadence(rows)
 		if err != nil {
 			return nil, err
 		}
-		habits = append(habits, habit)
+		cadences = append(cadences, cadence)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate habits: %w", err)
+		return nil, fmt.Errorf("iterate cadences: %w", err)
 	}
 
-	return habits, nil
+	return cadences, nil
 }
 
-func (r Repository) Update(ctx context.Context, userID, habitID int64, input UpdateHabitInput) (Habit, error) {
-	current, err := r.GetByID(ctx, userID, habitID)
+func (r CadenceRepository) Update(ctx context.Context, userID, cadenceID int64, input UpdateCadenceInput) (Cadence, error) {
+	current, err := r.GetByID(ctx, userID, cadenceID)
 	if err != nil {
-		return Habit{}, err
+		return Cadence{}, err
 	}
 
-	merged := CreateHabitInput{
+	merged := CreateCadenceInput{
 		Name:         current.Name,
 		Type:         current.Type,
 		Unit:         current.Unit,
@@ -128,8 +128,8 @@ func (r Repository) Update(ctx context.Context, userID, habitID int64, input Upd
 		merged.DisplayOrder = *input.DisplayOrder
 	}
 
-	if err := validateCreateHabit(merged); err != nil {
-		return Habit{}, err
+	if err := validateCreateCadence(merged); err != nil {
+		return Cadence{}, err
 	}
 
 	isActive := current.IsActive
@@ -161,27 +161,27 @@ func (r Repository) Update(ctx context.Context, userID, habitID int64, input Upd
 			updated_at = NOW()
 		WHERE id = $1 AND user_id = $2
 		RETURNING id, name, type, unit, target_type, target_value, display_order, is_active, created_at, updated_at
-	`, habitID, userID, merged.Name, merged.Type, nullableString(merged.Unit), merged.TargetType, merged.TargetValue, merged.DisplayOrder, isActive, input.IsArchived)
+	`, cadenceID, userID, merged.Name, merged.Type, nullableString(merged.Unit), merged.TargetType, merged.TargetValue, merged.DisplayOrder, isActive, input.IsArchived)
 
-	return scanHabit(row)
+	return scanCadence(row)
 }
 
-func (r Repository) GetByID(ctx context.Context, userID, habitID int64) (Habit, error) {
+func (r CadenceRepository) GetByID(ctx context.Context, userID, cadenceID int64) (Cadence, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT id, name, type, unit, target_type, target_value, display_order, is_active, created_at, updated_at
 		FROM habits
 		WHERE id = $1 AND user_id = $2
-	`, habitID, userID)
+	`, cadenceID, userID)
 
-	habit, err := scanHabit(row)
+	cadence, err := scanCadence(row)
 	if err != nil {
-		return Habit{}, fmt.Errorf("get habit: %w", err)
+		return Cadence{}, fmt.Errorf("get cadence: %w", err)
 	}
 
-	return habit, nil
+	return cadence, nil
 }
 
-func validateCreateHabit(input CreateHabitInput) error {
+func validateCreateCadence(input CreateCadenceInput) error {
 	if input.Name == "" {
 		return fmt.Errorf("%w: name is required", ErrInvalidInput)
 	}
@@ -200,11 +200,11 @@ func validateCreateHabit(input CreateHabitInput) error {
 	}
 
 	if input.Type == "binary" && input.TargetType != "complete" {
-		return fmt.Errorf("%w: binary habits must use targetType complete", ErrInvalidInput)
+		return fmt.Errorf("%w: binary cadences must use targetType complete", ErrInvalidInput)
 	}
 
 	if input.Type == "counter" && input.TargetValue == nil {
-		return fmt.Errorf("%w: counter habits require targetValue", ErrInvalidInput)
+		return fmt.Errorf("%w: counter cadences require targetValue", ErrInvalidInput)
 	}
 
 	if input.TargetValue != nil && *input.TargetValue < 0 {
@@ -214,32 +214,32 @@ func validateCreateHabit(input CreateHabitInput) error {
 	return nil
 }
 
-func scanHabit(row interface {
+func scanCadence(row interface {
 	Scan(dest ...any) error
-}) (Habit, error) {
-	var habit Habit
+}) (Cadence, error) {
+	var cadence Cadence
 	var unit *string
 	var targetValue *int
 
 	if err := row.Scan(
-		&habit.ID,
-		&habit.Name,
-		&habit.Type,
+		&cadence.ID,
+		&cadence.Name,
+		&cadence.Type,
 		&unit,
-		&habit.TargetType,
+		&cadence.TargetType,
 		&targetValue,
-		&habit.DisplayOrder,
-		&habit.IsActive,
-		&habit.CreatedAt,
-		&habit.UpdatedAt,
+		&cadence.DisplayOrder,
+		&cadence.IsActive,
+		&cadence.CreatedAt,
+		&cadence.UpdatedAt,
 	); err != nil {
-		return Habit{}, fmt.Errorf("scan habit: %w", err)
+		return Cadence{}, fmt.Errorf("scan cadence: %w", err)
 	}
 
-	habit.Unit = unit
-	habit.TargetValue = targetValue
+	cadence.Unit = unit
+	cadence.TargetValue = targetValue
 
-	return habit, nil
+	return cadence, nil
 }
 
 func nullableString(value *string) any {

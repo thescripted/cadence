@@ -1,19 +1,17 @@
-package httpapi
+package app
 
 import (
 	"errors"
 	"net/http"
 	"time"
-
-	"github.com/thescripted/habit-tracking/apps/api/internal/today"
 )
 
 type TodayHandler struct {
-	repo   today.Repository
+	repo   TodayRepository
 	userID int64
 }
 
-func NewTodayHandler(repo today.Repository, userID int64) TodayHandler {
+func NewTodayHandler(repo TodayRepository, userID int64) TodayHandler {
 	return TodayHandler{repo: repo, userID: userID}
 }
 
@@ -30,7 +28,7 @@ func (h TodayHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h TodayHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
-	var input today.UpdateLogInput
+	var input UpdateLogInput
 	if err := decodeJSON(r, &input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid JSON payload",
@@ -41,7 +39,7 @@ func (h TodayHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 	response, err := h.repo.UpdateLog(r.Context(), h.userID, time.Now(), input)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
-		if errors.Is(err, today.ErrInvalidLogInput) {
+		if errors.Is(err, ErrInvalidLogInput) {
 			statusCode = http.StatusBadRequest
 		}
 
@@ -55,7 +53,7 @@ func (h TodayHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h TodayHandler) UpdateNote(w http.ResponseWriter, r *http.Request) {
-	var input today.UpdateNoteInput
+	var input UpdateNoteInput
 	if err := decodeJSON(r, &input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid JSON payload",

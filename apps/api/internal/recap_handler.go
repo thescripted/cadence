@@ -1,18 +1,16 @@
-package httpapi
+package app
 
 import (
 	"net/http"
 	"time"
-
-	"github.com/thescripted/habit-tracking/apps/api/internal/recap"
 )
 
 type RecapHandler struct {
-	repo   recap.Repository
+	repo   RecapRepository
 	userID int64
 }
 
-func NewRecapHandler(repo recap.Repository, userID int64) RecapHandler {
+func NewRecapHandler(repo RecapRepository, userID int64) RecapHandler {
 	return RecapHandler{repo: repo, userID: userID}
 }
 

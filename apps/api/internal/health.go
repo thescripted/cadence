@@ -1,4 +1,4 @@
-package health
+package app
 
 import (
 	"context"
@@ -9,17 +9,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Handler struct {
+type HealthHandler struct {
 	DB *pgxpool.Pool
 }
 
-func (h Handler) Live(w http.ResponseWriter, _ *http.Request) {
+func (h HealthHandler) Live(w http.ResponseWriter, _ *http.Request) {
 	writeHealthJSON(w, http.StatusOK, map[string]string{
 		"status": "ok",
 	})
 }
 
-func (h Handler) Ready(w http.ResponseWriter, _ *http.Request) {
+func (h HealthHandler) Ready(w http.ResponseWriter, _ *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 

@@ -1,23 +1,21 @@
-package httpapi
+package app
 
 import (
 	"errors"
 	"net/http"
 	"strconv"
-
-	"github.com/thescripted/habit-tracking/apps/api/internal/habits"
 )
 
-type HabitsHandler struct {
-	repo   habits.Repository
+type CadenceHandler struct {
+	repo   CadenceRepository
 	userID int64
 }
 
-func NewHabitsHandler(repo habits.Repository, userID int64) HabitsHandler {
-	return HabitsHandler{repo: repo, userID: userID}
+func NewCadenceHandler(repo CadenceRepository, userID int64) CadenceHandler {
+	return CadenceHandler{repo: repo, userID: userID}
 }
 
-func (h HabitsHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h CadenceHandler) List(w http.ResponseWriter, r *http.Request) {
 	items, err := h.repo.List(r.Context(), h.userID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{
@@ -31,8 +29,8 @@ func (h HabitsHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h HabitsHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var input habits.CreateHabitInput
+func (h CadenceHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var input CreateCadenceInput
 	if err := decodeJSON(r, &input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid JSON payload",
@@ -40,7 +38,7 @@ func (h HabitsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	habit, err := h.repo.Create(r.Context(), h.userID, input)
+	item, err := h.repo.Create(r.Context(), h.userID, input)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if isValidationError(err) {
@@ -53,19 +51,19 @@ func (h HabitsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, habit)
+	writeJSON(w, http.StatusCreated, item)
 }
 
-func (h HabitsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	habitID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil || habitID <= 0 {
+func (h CadenceHandler) Update(w http.ResponseWriter, r *http.Request) {
+	cadenceID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || cadenceID <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "invalid habit id",
+			"error": "invalid cadence id",
 		})
 		return
 	}
 
-	var input habits.UpdateHabitInput
+	var input UpdateCadenceInput
 	if err := decodeJSON(r, &input); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "invalid JSON payload",
@@ -73,7 +71,7 @@ func (h HabitsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	habit, err := h.repo.Update(r.Context(), h.userID, habitID, input)
+	item, err := h.repo.Update(r.Context(), h.userID, cadenceID, input)
 	if err != nil {
 		statusCode := http.StatusInternalServerError
 		if isValidationError(err) {
@@ -86,9 +84,9 @@ func (h HabitsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, habit)
+	writeJSON(w, http.StatusOK, item)
 }
 
 func isValidationError(err error) bool {
-	return errors.Is(err, habits.ErrInvalidInput)
+	return errors.Is(err, ErrInvalidInput)
 }

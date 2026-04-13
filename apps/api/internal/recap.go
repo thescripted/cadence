@@ -1,4 +1,4 @@
-package recap
+package app
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type HabitSummary struct {
-	HabitID        int64  `json:"habitId"`
+type CadenceSummary struct {
+	CadenceID      int64  `json:"habitId"`
 	Name           string `json:"name"`
 	Type           string `json:"type"`
 	SuccessfulDays int    `json:"successfulDays"`
@@ -22,20 +22,20 @@ type HabitSummary struct {
 }
 
 type WeekResponse struct {
-	StartDate string         `json:"startDate"`
-	EndDate   string         `json:"endDate"`
-	Habits    []HabitSummary `json:"habits"`
+	StartDate string           `json:"startDate"`
+	EndDate   string           `json:"endDate"`
+	Cadences  []CadenceSummary `json:"habits"`
 }
 
-type Repository struct {
+type RecapRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewRepository(db *pgxpool.Pool) Repository {
-	return Repository{db: db}
+func NewRecapRepository(db *pgxpool.Pool) RecapRepository {
+	return RecapRepository{db: db}
 }
 
-func (r Repository) Week(ctx context.Context, userID int64, endDate time.Time) (WeekResponse, error) {
+func (r RecapRepository) Week(ctx context.Context, userID int64, endDate time.Time) (WeekResponse, error) {
 	startDate := endDate.AddDate(0, 0, -6)
 	rows, err := r.db.Query(ctx, `
 		SELECT
@@ -87,13 +87,13 @@ func (r Repository) Week(ctx context.Context, userID int64, endDate time.Time) (
 	response := WeekResponse{
 		StartDate: startDate.Format("2006-01-02"),
 		EndDate:   endDate.Format("2006-01-02"),
-		Habits:    make([]HabitSummary, 0),
+		Cadences:  make([]CadenceSummary, 0),
 	}
 
 	for rows.Next() {
-		var item HabitSummary
+		var item CadenceSummary
 		if err := rows.Scan(
-			&item.HabitID,
+			&item.CadenceID,
 			&item.Name,
 			&item.Type,
 			&item.TargetType,
@@ -106,7 +106,7 @@ func (r Repository) Week(ctx context.Context, userID int64, endDate time.Time) (
 		); err != nil {
 			return WeekResponse{}, fmt.Errorf("scan week recap: %w", err)
 		}
-		response.Habits = append(response.Habits, item)
+		response.Cadences = append(response.Cadences, item)
 	}
 
 	if err := rows.Err(); err != nil {

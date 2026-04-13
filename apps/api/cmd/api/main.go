@@ -9,13 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/thescripted/habit-tracking/apps/api/internal/config"
-	"github.com/thescripted/habit-tracking/apps/api/internal/db"
-	"github.com/thescripted/habit-tracking/apps/api/internal/httpapi"
+	app "github.com/thescripted/habit-tracking/apps/api/internal"
 )
 
 func main() {
-	cfg, err := config.Load()
+	cfg, err := app.Load()
 	if err != nil {
 		slog.Error("load config", "error", err)
 		os.Exit(1)
@@ -23,7 +21,7 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	dbPool, err := db.Open(context.Background(), cfg.DatabaseURL)
+	dbPool, err := app.Open(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		logger.Error("open database", "error", err)
 		os.Exit(1)
@@ -32,7 +30,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              cfg.ServerAddress(),
-		Handler:           httpapi.NewMux(dbPool, cfg.DefaultUser),
+		Handler:           app.NewMux(dbPool, cfg.DefaultUser),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
